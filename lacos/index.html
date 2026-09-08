@@ -1,0 +1,683 @@
+<title>Laços</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+:root{
+  --navy:#18254a; --brand-text:#18254a;
+  --ink:#1b2030; --muted:#5f6678; --faint:#8a90a3;
+  --paper:#f3f4f7; --surface:#ffffff; --surface-2:#eaecf2; --line:#d9dce5; --line-strong:#b9bfcf;
+  --accent:#18254a; --accent-ink:#ffffff; --accent-soft:#e6e9f3;
+  --late:#a63d2f; --late-bg:#f8e9e6;
+  --due:#a86d12; --due-bg:#f9efd9;
+  --ok:#2f7a5b; --ok-bg:#e3f1ea;
+  --pause:#6b7280; --pause-bg:#ebedf1;
+  --shadow:0 10px 30px rgba(24,37,74,.12);
+  --radius:10px;
+  --serif:'Instrument Serif',Georgia,'Times New Roman',serif;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --navy:#d6ddf5; --brand-text:#e7ebfa;
+    --ink:#e7e9f0; --muted:#a3a9bd; --faint:#7c8399;
+    --paper:#0f1424; --surface:#171d33; --surface-2:#1f2740; --line:#2b3350; --line-strong:#3d4666;
+    --accent:#9db0ea; --accent-ink:#0f1424; --accent-soft:#232c48;
+    --late:#e58c80; --late-bg:#3a1f1c;
+    --due:#e4b95f; --due-bg:#3a2e14;
+    --ok:#7ccb9f; --ok-bg:#163627;
+    --pause:#9aa1b5; --pause-bg:#262c3e;
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --navy:#d6ddf5; --brand-text:#e7ebfa;
+  --ink:#e7e9f0; --muted:#a3a9bd; --faint:#7c8399;
+  --paper:#0f1424; --surface:#171d33; --surface-2:#1f2740; --line:#2b3350; --line-strong:#3d4666;
+  --accent:#9db0ea; --accent-ink:#0f1424; --accent-soft:#232c48;
+  --late:#e58c80; --late-bg:#3a1f1c;
+  --due:#e4b95f; --due-bg:#3a2e14;
+  --ok:#7ccb9f; --ok-bg:#163627;
+  --pause:#9aa1b5; --pause-bg:#262c3e;
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+html{color-scheme:light dark}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{margin:0;font-weight:500;text-wrap:balance}
+a{color:var(--accent)}
+.app{max-width:1280px;margin:0 auto;padding:22px 24px 80px}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid var(--line);margin-bottom:22px}
+.eyebrow{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.brand{font-family:var(--serif);font-size:40px;line-height:1;color:var(--brand-text);margin-top:4px}
+.brand em{font-style:italic;color:var(--muted)}
+.top .meta{display:flex;gap:18px;align-items:center;flex-wrap:wrap;color:var(--muted);font-size:13.5px}
+.top .meta b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:500;line-height:1.4;white-space:nowrap}
+.chip.late{background:var(--late-bg);color:var(--late)}
+.chip.due{background:var(--due-bg);color:var(--due)}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}
+.chip.pause{background:var(--pause-bg);color:var(--pause)}
+.chip.neutral{background:var(--surface-2);color:var(--muted)}
+.chip.example{background:var(--accent-soft);color:var(--accent)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.grid{display:grid;grid-template-columns:330px minmax(0,1fr);gap:26px;align-items:start}
+@media (max-width:920px){.grid{grid-template-columns:1fr}}
+/* Agenda */
+.agenda{position:sticky;top:16px}
+@media (max-width:920px){.agenda{position:static}}
+.agenda h2{font-family:var(--serif);font-size:26px;color:var(--brand-text)}
+.agenda .sub{color:var(--muted);font-size:13.5px;margin:2px 0 14px}
+.asec{margin-bottom:16px}
+.asec .lbl{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:0 2px 6px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.asec .lbl.late{color:var(--late);border-color:var(--late)}
+.asec .lbl.due{color:var(--due);border-color:var(--due)}
+.arow{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:transparent;border:0;padding:8px 6px;border-radius:8px;cursor:pointer}
+.arow:hover,.arow:focus-visible{background:var(--surface)}
+.arow:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.arow .stripe{width:3px;align-self:stretch;border-radius:2px;background:var(--line-strong);flex:none}
+.arow.late .stripe{background:var(--late)}
+.arow.due .stripe{background:var(--due)}
+.arow .who{flex:1;min-width:0}
+.arow .who b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arow .who span{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arow .when{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.arow.late .when{color:var(--late);font-weight:500}
+.aempty{font-size:13.5px;color:var(--faint);padding:6px 6px 2px;font-style:italic}
+.quiet{background:var(--surface);border:1px dashed var(--line-strong);border-radius:var(--radius);padding:16px;font-size:14px;color:var(--muted)}
+.quiet b{color:var(--ink);font-weight:500}
+/* Toolbar */
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.search{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:0 10px}
+.search input{flex:1;border:0;background:transparent;padding:9px 0;outline:0;min-width:0}
+.search svg{color:var(--faint);flex:none}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.fbtn{background:transparent;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--muted);cursor:pointer}
+.fbtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.fbtn:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-strong);background:var(--surface);border-radius:8px;padding:8px 14px;font-size:14px;font-weight:500;cursor:pointer;line-height:1.3;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--late);border-color:var(--late-bg)}
+.btn.danger:hover{border-color:var(--late)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn[disabled]{opacity:.55;cursor:default}
+/* Cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 16px 14px 20px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:10px;min-height:150px;transition:border-color .15s,transform .15s}
+.card::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:4px;border-radius:0 3px 3px 0;background:var(--line-strong)}
+.card.late::before{background:var(--late)}
+.card.due::before{background:var(--due)}
+.card.ok::before{background:var(--ok)}
+.card.pause::before{background:var(--pause)}
+.card:hover{border-color:var(--line-strong);transform:translateY(-1px)}
+.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card .head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.card .head .chip{flex:none}
+.card .name{font-family:var(--serif);font-size:21px;line-height:1.15;color:var(--brand-text)}
+.card .firm{font-size:13px;color:var(--muted);margin-top:2px}
+.card .topic{font-size:14px;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .foot{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.card .foot .cad{white-space:nowrap}
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:36px 32px;max-width:640px}
+.empty h3{font-family:var(--serif);font-size:30px;color:var(--brand-text);margin-bottom:8px}
+.empty p{color:var(--muted);margin:0 0 14px;max-width:60ch}
+.empty ol{margin:0 0 18px;padding-left:20px;color:var(--ink)}
+.empty li{margin-bottom:6px}
+/* Slide-over detail */
+.scrim{position:fixed;inset:0;background:rgba(10,14,28,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+.scrim.open{opacity:1;pointer-events:auto}
+.panel{position:fixed;top:0;right:0;bottom:0;width:min(600px,100%);background:var(--paper);border-left:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(102%);transition:transform .22s ease;z-index:21;overflow-y:auto;display:flex;flex-direction:column}
+.panel.open{transform:none}
+.panel .ph{padding:20px 24px 16px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2}
+.panel .ph .row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.panel .ph .name{font-family:var(--serif);font-size:32px;line-height:1.05;color:var(--brand-text)}
+.panel .ph .firm{color:var(--muted);font-size:14px;margin-top:3px}
+.iconbtn{background:transparent;border:1px solid var(--line);border-radius:8px;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex:none}
+.iconbtn:hover{border-color:var(--accent);color:var(--accent)}
+.pulse{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.pulse>div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.pulse .k{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.pulse .v{font-size:17px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px;line-height:1.2}
+.pulse .v.late{color:var(--late)}.pulse .v.due{color:var(--due)}.pulse .v.ok{color:var(--ok)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.pb{padding:18px 24px 40px;display:flex;flex-direction:column;gap:18px}
+.sec h3{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:6px 12px;font-size:14px}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.last .date{font-size:13px;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.last .sum{white-space:pre-wrap;font-size:14.5px;line-height:1.55}
+.md{font-size:14px;line-height:1.55}
+.md p{margin:0 0 8px}
+.md .h{font-weight:600;margin:10px 0 4px;color:var(--brand-text)}
+.md .q{border-left:3px solid var(--line-strong);padding-left:10px;color:var(--muted);margin:6px 0}
+.md ul{margin:0 0 8px;padding-left:18px}
+.promise{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+@media (max-width:520px){.promise{grid-template-columns:1fr}}
+.promise div{background:var(--paper);border-radius:8px;padding:10px 12px;font-size:13.5px}
+.promise .k{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:3px}
+.plaud{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);background:var(--surface-2);border-radius:6px;padding:3px 8px}
+.hist{display:flex;flex-direction:column;gap:8px}
+.hitem{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.hitem summary{cursor:pointer;display:flex;justify-content:space-between;gap:10px;font-size:14px;list-style:none}
+.hitem summary::-webkit-details-marker{display:none}
+.hitem summary b{font-weight:500}
+.hitem summary span{color:var(--muted);font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.hitem .body{margin-top:8px;font-size:14px;white-space:pre-wrap;color:var(--ink)}
+.hitem .tools{margin-top:8px;display:flex;gap:8px}
+.dates li{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.dates li:last-child{border:0}
+.dates ul{list-style:none;margin:0;padding:0}
+.dates .soon{color:var(--due);font-weight:500}
+.personal{white-space:pre-wrap;font-size:14px}
+/* Dialogs */
+dialog{border:0;border-radius:12px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);width:min(680px,calc(100% - 24px));max-height:calc(100vh - 32px)}
+dialog::backdrop{background:rgba(10,14,28,.5)}
+.dh{padding:18px 24px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.dh h2{font-family:var(--serif);font-size:26px;color:var(--brand-text)}
+.dh p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.db{padding:16px 24px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:calc(100vh - 170px)}
+.df{padding:12px 24px 18px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.df .right{display:flex;gap:8px;margin-left:auto}
+.f{display:flex;flex-direction:column;gap:4px}
+.f label{font-size:12.5px;font-weight:500;color:var(--muted)}
+.f input,.f select,.f textarea{border:1px solid var(--line-strong);border-radius:7px;padding:8px 10px;background:var(--paper);width:100%}
+.f input:focus,.f select:focus,.f textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.f textarea{min-height:76px;resize:vertical;line-height:1.45}
+.f .hint{font-size:12px;color:var(--faint)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media (max-width:560px){.two,.three{grid-template-columns:1fr}}
+.subh{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:500;padding-top:6px;border-top:1px solid var(--line);margin-top:4px}
+.dlist{display:flex;flex-direction:column;gap:6px}
+.drow{display:grid;grid-template-columns:1fr 150px auto auto;gap:8px;align-items:center}
+@media (max-width:560px){.drow{grid-template-columns:1fr 1fr;grid-auto-rows:auto}}
+.drow input[type="text"],.drow input[type="date"]{border:1px solid var(--line-strong);border-radius:7px;padding:7px 9px;background:var(--paper);width:100%}
+.drow label{font-size:12.5px;color:var(--muted);display:flex;gap:4px;align-items:center;white-space:nowrap}
+.plaudbox{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--paper);display:flex;flex-direction:column;gap:10px}
+.plaudbox .t{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.plaudbox .t b{font-weight:500}
+.plaudbox .t .st{font-size:12.5px;color:var(--muted)}
+.psearch{display:flex;gap:8px}
+.psearch input{flex:1;border:1px solid var(--line-strong);border-radius:7px;padding:7px 10px;background:var(--surface)}
+.plist{display:flex;flex-direction:column;gap:4px;max-height:200px;overflow:auto}
+.pitem{display:flex;justify-content:space-between;gap:10px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:7px 10px;cursor:pointer;font-size:13.5px}
+.pitem:hover,.pitem[aria-pressed="true"]{border-color:var(--accent)}
+.pitem[aria-pressed="true"]{background:var(--accent-soft)}
+.pitem b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pitem span{color:var(--muted);font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pmsg{font-size:13px;color:var(--muted)}
+.pmsg.err{color:var(--late)}
+.selrec{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:13.5px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;transition:.2s;z-index:50;pointer-events:none;max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.banner{background:var(--due-bg);color:var(--due);border-radius:8px;padding:8px 12px;font-size:13.5px;margin-bottom:14px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Advogados Costa · Relacionamento</div>
+      <h1 class="brand">Laços <em>quem precisa de você hoje</em></h1>
+    </div>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <div id="banner" hidden class="banner"></div>
+
+  <div class="grid">
+    <aside class="agenda" aria-label="Agenda de contatos">
+      <h2 id="agendaTitle">Hoje</h2>
+      <div class="sub" id="agendaSub"></div>
+      <div id="agenda"></div>
+    </aside>
+
+    <main>
+      <div class="toolbar">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="q" type="search" placeholder="Buscar cliente, empresa ou assunto" aria-label="Buscar cliente">
+        </div>
+        <div class="filters" id="filters" role="group" aria-label="Filtrar por situação">
+          <button class="fbtn" data-f="todos" aria-pressed="true">Todos</button>
+          <button class="fbtn" data-f="late" aria-pressed="false">Em atraso</button>
+          <button class="fbtn" data-f="due" aria-pressed="false">Esta semana</button>
+          <button class="fbtn" data-f="ok" aria-pressed="false">Em dia</button>
+          <button class="fbtn" data-f="pause" aria-pressed="false">Pausados</button>
+        </div>
+        <button class="btn primary" id="newClient">+ Novo cliente</button>
+      </div>
+      <div id="list"></div>
+    </main>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<section class="panel" id="panel" aria-label="Detalhes do cliente" aria-hidden="true"></section>
+
+<dialog id="dlgClient">
+  <form method="dialog" id="formClient">
+    <div class="dh"><div><h2 id="dlgClientTitle">Novo cliente</h2><p>Quem é, do que cuidamos e com que frequência você quer aparecer.</p></div><button type="button" class="iconbtn" data-close aria-label="Fechar">✕</button></div>
+    <div class="db">
+      <div class="two">
+        <div class="f"><label for="c_nome">Nome</label><input id="c_nome" required autocomplete="off"></div>
+        <div class="f"><label for="c_empresa">Empresa / grupo</label><input id="c_empresa" autocomplete="off"></div>
+      </div>
+      <div class="f"><label for="c_assunto">Do que cuidamos hoje</label><input id="c_assunto" placeholder="Ex.: planejamento tributário e constituição de holding" autocomplete="off"></div>
+      <div class="three">
+        <div class="f"><label for="c_cad">Falar a cada</label>
+          <select id="c_cad">
+            <option value="7">7 dias (semanal)</option>
+            <option value="15">15 dias (quinzenal)</option>
+            <option value="30" selected>30 dias (mensal)</option>
+            <option value="45">45 dias</option>
+            <option value="60">60 dias (bimestral)</option>
+            <option value="90">90 dias (trimestral)</option>
+          </select></div>
+        <div class="f"><label for="c_canal">Canal preferido</label>
+          <select id="c_canal"><option>WhatsApp</option><option>Ligação</option><option>Reunião presencial</option><option>Videochamada</option><option>E-mail</option><option>Café</option></select></div>
+        <div class="f"><label for="c_status">Situação</label>
+          <select id="c_status"><option value="ativo">Ativo</option><option value="pausado">Pausado</option></select></div>
+      </div>
+      <div class="two">
+        <div class="f"><label for="c_tel">Telefone / WhatsApp</label><input id="c_tel" inputmode="tel" placeholder="(19) 9 9999-9999" autocomplete="off"></div>
+        <div class="f"><label for="c_email">E-mail</label><input id="c_email" type="email" autocomplete="off"></div>
+      </div>
+      <div class="f"><label for="c_pessoal">Lado pessoal</label><textarea id="c_pessoal" placeholder="Família, gostos, como prefere ser tratado, o que o deixa tranquilo. É o que faz a conversa começar por ele, e não pelo processo."></textarea></div>
+      <div class="subh">Datas que importam</div>
+      <div class="dlist" id="c_datas"></div>
+      <div><button type="button" class="btn sm" id="addDate">+ Adicionar data</button> <span class="hint" style="font-size:12px;color:var(--faint)">Aniversário, audiência, vencimento de contrato, data da empresa.</span></div>
+    </div>
+    <div class="df">
+      <button type="button" class="btn danger" id="delClient" hidden>Excluir cliente</button>
+      <div class="right"><button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn primary">Salvar</button></div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgConv">
+  <form method="dialog" id="formConv">
+    <div class="dh"><div><h2>Registrar conversa</h2><p id="convSub"></p></div><button type="button" class="iconbtn" data-close aria-label="Fechar">✕</button></div>
+    <div class="db">
+      <div class="three">
+        <div class="f"><label for="v_data">Quando</label><input id="v_data" type="date" required></div>
+        <div class="f"><label for="v_canal">Por onde</label>
+          <select id="v_canal"><option>WhatsApp</option><option>Ligação</option><option>Reunião presencial</option><option>Videochamada</option><option>E-mail</option><option>Café</option></select></div>
+        <div class="f"><label for="v_prox">Próximo contato</label><input id="v_prox" type="date" required></div>
+      </div>
+      <div class="plaudbox" id="plaudbox">
+        <div class="t"><b>Gravação do Plaud</b><span class="st" id="plaudStatus"></span></div>
+        <div id="plaudBody"></div>
+      </div>
+      <div class="f"><label for="v_resumo">O que conversamos</label><textarea id="v_resumo" required placeholder="Em linguagem de gente: o que ele perguntou, o que expliquei, como ele reagiu."></textarea></div>
+      <div class="two">
+        <div class="f"><label for="v_prometi">O que eu prometi</label><textarea id="v_prometi" placeholder="Ex.: enviar simulação Simples × Presumido até sexta"></textarea></div>
+        <div class="f"><label for="v_prometeu">O que o cliente ficou de fazer</label><textarea id="v_prometeu" placeholder="Ex.: mandar o balancete de agosto"></textarea></div>
+      </div>
+      <div class="f"><label for="v_proximo">Por onde começar da próxima vez</label><input id="v_proximo" placeholder="Ex.: perguntar se a consultora respondeu; lembrar do café combinado" autocomplete="off"></div>
+    </div>
+    <div class="df"><div class="right"><button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn primary">Salvar conversa</button></div></div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const h=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const todayStr=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());};
+const parse=s=>{if(!s)return null;const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);return m?new Date(+m[1],+m[2]-1,+m[3]):null;};
+const toStr=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const addDays=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return toStr(d);};
+const diffDays=(a,b)=>Math.round((parse(b)-parse(a))/86400000); // b - a
+const fmtLong=new Intl.DateTimeFormat('pt-BR',{day:'numeric',month:'short',year:'numeric'});
+const fmtShort=new Intl.DateTimeFormat('pt-BR',{day:'numeric',month:'short'});
+const fmt=(s,long)=>{const d=parse(s);return d?(long?fmtLong:fmtShort).format(d).replace('.',''):'—';};
+const weekday=s=>{const d=parse(s);return d?new Intl.DateTimeFormat('pt-BR',{weekday:'long'}).format(d):'';};
+const uid=()=> (crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,8));
+const firstName=n=>String(n||'').trim().split(/\s+/)[0]||'';
+const digits=t=>String(t||'').replace(/\D/g,'');
+const waLink=t=>{let d=digits(t);if(!d)return null;if(d.length===10||d.length===11)d='55'+d;return 'https://wa.me/'+d;};
+const durTxt=ms=>{const m=Math.round((ms||0)/60000);return m<60?m+' min':Math.floor(m/60)+' h '+pad(m%60)+' min';};
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2600);}
+function md(text){ // light rendering of the Plaud summary style
+  const lines=String(text||'').split(/\r?\n/);let out='',inList=false;
+  const inline=s=>h(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  for(const raw of lines){const l=raw.trim();
+    const li=/^[-*] \[( |x)\] (.*)$/i.exec(l)||/^[-*] (.*)$/.exec(l)||/^\d+\. (.*)$/.exec(l);
+    if(li){if(!inList){out+='<ul>';inList=true;}const txt=li.length===3?( (li[1]==='x'||li[1]==='X')?'☑ ':'☐ ')+li[2]:li[1];out+='<li>'+inline(txt)+'</li>';continue;}
+    if(inList){out+='</ul>';inList=false;}
+    if(!l)continue;
+    if(/^#{1,6} /.test(l)){out+='<div class="h">'+inline(l.replace(/^#+ /,''))+'</div>';}
+    else if(/^> ?/.test(l)){out+='<div class="q">'+inline(l.replace(/^> ?/,''))+'</div>';}
+    else out+='<p>'+inline(l)+'</p>';
+  }
+  if(inList)out+='</ul>';return out;
+}
+
+/* ---------- status ---------- */
+function nextDate(c){ if(c.proximoContato)return c.proximoContato; if(c.ultimoContato)return addDays(c.ultimoContato,+c.cadenciaDias||30); return todayStr(); }
+function statusOf(c){
+  if(c.status==='pausado')return {key:'pause',cls:'pause',label:'Pausado',d:null};
+  const hoje=todayStr(),prox=nextDate(c),d=diffDays(hoje,prox);
+  if(d<0)return {key:'late',cls:'late',label:(-d)+(d===-1?' dia de atraso':' dias de atraso'),short:(-d)+' d atrás',d};
+  if(d===0)return {key:'due',cls:'due',label:'Hoje',short:'hoje',d};
+  if(d<=7)return {key:'due',cls:'due',label:'Em '+d+(d===1?' dia':' dias'),short:'em '+d+' d',d};
+  return {key:'ok',cls:'ok',label:'Em '+d+' dias',short:'em '+d+' d',d};
+}
+function nextOccurrence(dt){ // {data, anual}
+  if(!dt||!dt.data)return null; if(!dt.anual)return dt.data;
+  const t=parse(todayStr()),d=parse(dt.data);let y=t.getFullYear();let n=new Date(y,d.getMonth(),d.getDate());if(n<t)n=new Date(y+1,d.getMonth(),d.getDate());return toStr(n);
+}
+
+/* ---------- stores ---------- */
+function LocalStore(){
+  const KEY='lacos.local.v1';let data;
+  try{data=JSON.parse(localStorage.getItem(KEY)||'null');}catch(e){data=null;}
+  data=data||{clientes:{},conversas:{}};
+  const subs=new Set(),csubs=new Map();
+  const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){}};
+  const emit=()=>{const arr=Object.entries(data.clientes).map(([id,c])=>Object.assign({id},c));subs.forEach(cb=>cb(arr));};
+  const emitC=id=>{const arr=Object.entries(data.conversas[id]||{}).map(([cid,v])=>Object.assign({id:cid},v)).sort((a,b)=>b.data<a.data?-1:1);(csubs.get(id)||new Set()).forEach(cb=>cb(arr));};
+  return {
+    kind:'local',
+    onClients(cb){subs.add(cb);setTimeout(emit,0);return()=>subs.delete(cb);},
+    async saveClient(id,body){id=id||uid();data.clientes[id]=body;persist();emit();return id;},
+    async deleteClient(id){delete data.clientes[id];delete data.conversas[id];persist();emit();},
+    onConversas(id,cb){if(!csubs.has(id))csubs.set(id,new Set());csubs.get(id).add(cb);setTimeout(()=>emitC(id),0);return()=>csubs.get(id).delete(cb);},
+    async addConversa(id,body){data.conversas[id]=data.conversas[id]||{};data.conversas[id][uid()]=body;persist();emitC(id);},
+    async deleteConversa(id,cid){if(data.conversas[id])delete data.conversas[id][cid];persist();emitC(id);}
+  };
+}
+function DbStore(db){
+  const col=db.collection('clientes');
+  const onErr=e=>{console.warn('db',e);if(e&&e.code==='quota_exceeded')toast('Limite de registros atingido. Exclua clientes ou conversas antigas.');};
+  return {
+    kind:'db',
+    onClients(cb){return col.onSnapshot(s=>cb(s.docs.map(d=>Object.assign({id:d.id},d.data()))),onErr);},
+    async saveClient(id,body){if(id){await db.doc('clientes/'+id).set(body);return id;}const r=await col.add(body);return r.id;},
+    async deleteClient(id){const q=await db.collection('clientes/'+id+'/conversas').limit(1000).get();await Promise.all(q.docs.map(d=>db.doc('clientes/'+id+'/conversas/'+d.id).delete()));await db.doc('clientes/'+id).delete();},
+    onConversas(id,cb){return db.collection('clientes/'+id+'/conversas').orderBy('data','desc').limit(200).onSnapshot(s=>cb(s.docs.map(d=>Object.assign({id:d.id},d.data()))),onErr);},
+    async addConversa(id,body){await db.collection('clientes/'+id+'/conversas').add(body);},
+    async deleteConversa(id,cid){await db.doc('clientes/'+id+'/conversas/'+cid).delete();}
+  };
+}
+
+/* ---------- state ---------- */
+const S={clients:[],filter:'todos',q:'',sel:null,store:null,mcp:null,mcpChecked:false,unsubConv:null,convs:[],editingId:null};
+
+/* ---------- render: header ---------- */
+function renderMeta(){
+  const act=S.clients.filter(c=>c.status!=='pausado');
+  const late=act.filter(c=>statusOf(c).key==='late').length;
+  const due=act.filter(c=>statusOf(c).key==='due').length;
+  $('#meta').innerHTML=`<span><b>${S.clients.length}</b> ${S.clients.length===1?'cliente':'clientes'}</span>`+
+    (late?`<span class="chip late"><i class="dot"></i>${late} em atraso</span>`:'')+
+    (due?`<span class="chip due"><i class="dot"></i>${due} esta semana</span>`:'')+
+    (!late&&!due&&S.clients.length?`<span class="chip ok"><i class="dot"></i>Todos em dia</span>`:'');
+}
+
+/* ---------- render: agenda ---------- */
+function renderAgenda(){
+  const hoje=todayStr();
+  $('#agendaSub').textContent=weekday(hoje).replace(/^./,c=>c.toUpperCase())+', '+fmt(hoje,true);
+  const act=S.clients.filter(c=>c.status!=='pausado').map(c=>Object.assign({st:statusOf(c),prox:nextDate(c)},c));
+  const late=act.filter(c=>c.st.key==='late').sort((a,b)=>a.prox<b.prox?-1:1);
+  const today=act.filter(c=>c.st.d===0);
+  const week=act.filter(c=>c.st.d>0&&c.st.d<=7).sort((a,b)=>a.prox<b.prox?-1:1);
+  const special=[];
+  for(const c of S.clients){for(const dt of (c.datasImportantes||[])){const n=nextOccurrence(dt);if(!n)continue;const d=diffDays(hoje,n);if(d>=0&&d<=30)special.push({c,dt,n,d});}}
+  special.sort((a,b)=>a.d-b.d);
+  const row=(c,when)=>`<button class="arow ${c.st.cls}" data-open="${h(c.id)}"><span class="stripe"></span><span class="who"><b>${h(c.nome)}</b><span>${h(c.ultimaConversa&&c.ultimaConversa.proximoAssunto||c.assunto||c.empresa||'')}</span></span><span class="when">${h(when)}</span></button>`;
+  const sec=(cls,title,items,empty)=>`<div class="asec"><div class="lbl ${cls}"><span>${title}</span><span>${items.length||''}</span></div>${items.length?items.join(''):`<div class="aempty">${empty}</div>`}</div>`;
+  let html='';
+  if(!S.clients.length){html=`<div class="quiet"><b>A agenda nasce dos clientes.</b> Cadastre o primeiro e diga a cada quantos dias quer falar com ele. A partir daí, esta coluna passa a dizer quem está esperando por você.</div>`;}
+  else{
+    html+=sec('late','Em atraso',late.map(c=>row(c,c.st.short)),'Ninguém esperando. Bom sinal.');
+    html+=sec('due','Hoje',today.map(c=>row(c,c.canal||'')),'Nada marcado para hoje.');
+    html+=sec('','Próximos 7 dias',week.map(c=>row(c,fmt(c.prox))),'Semana livre.');
+    html+=sec('','Datas especiais · 30 dias',special.map(s=>`<button class="arow ${s.d<=3?'due':''}" data-open="${h(s.c.id)}"><span class="stripe"></span><span class="who"><b>${h(s.c.nome)}</b><span>${h(s.dt.rotulo)}</span></span><span class="when">${s.d===0?'hoje':(s.d===1?'amanhã':fmt(s.n))}</span></button>`),'Nenhuma data nos próximos 30 dias.');
+  }
+  $('#agenda').innerHTML=html;
+}
+
+/* ---------- render: list ---------- */
+function matches(c){
+  const st=statusOf(c).key;
+  if(S.filter!=='todos'&&st!==S.filter)return false;
+  if(S.q){const t=(c.nome+' '+(c.empresa||'')+' '+(c.assunto||'')).toLowerCase();if(!t.includes(S.q))return false;}
+  return true;
+}
+function renderList(){
+  const el=$('#list');
+  if(!S.clients.length){
+    el.innerHTML=`<div class="empty"><h3>Comece por quem mais importa.</h3><p>Laços é a sua lista de gente, não de processos. Três passos:</p><ol><li><b>Cadastre o cliente</b> e escolha a cada quantos dias quer aparecer para ele.</li><li><b>Depois de cada conversa, registre</b> o que foi dito, o que você prometeu e por onde começar da próxima vez. Se houver gravação no Plaud, vincule e traga o resumo.</li><li><b>Abra esta página de manhã.</b> A coluna à esquerda mostra quem está esperando por você.</li></ol><button class="btn primary" id="emptyNew">+ Cadastrar o primeiro cliente</button></div>`;
+    $('#emptyNew').addEventListener('click',()=>openClientForm(null));return;
+  }
+  const order={late:0,due:1,ok:2,pause:3};
+  const rows=S.clients.filter(matches).map(c=>({c,st:statusOf(c)})).sort((a,b)=>(order[a.st.key]-order[b.st.key])||((a.st.d??9999)-(b.st.d??9999))||a.c.nome.localeCompare(b.c.nome));
+  if(!rows.length){el.innerHTML=`<div class="quiet">Nenhum cliente nesse filtro.</div>`;return;}
+  el.innerHTML=`<div class="cards">`+rows.map(({c,st})=>{
+    const last=c.ultimaConversa;
+    return `<button class="card ${st.cls}" data-open="${h(c.id)}">
+      <div class="head"><div><div class="name">${h(c.nome)}</div><div class="firm">${h(c.empresa||'')}</div></div><span class="chip ${st.cls}">${h(st.label)}</span></div>
+      <div class="topic">${h(last&&last.proximoAssunto?'Retomar: '+last.proximoAssunto:(c.assunto||'Sem assunto definido'))}</div>
+      <div class="foot"><span>${last?'Última conversa '+fmt(last.data):(c.ultimoContato?'Último contato '+fmt(c.ultimoContato):'Sem conversa registrada')}</span><span class="cad">a cada ${h(c.cadenciaDias||30)} d</span></div>
+      ${c.exemplo?'<span class="chip example" style="position:absolute;right:12px;bottom:40px">Exemplo</span>':''}
+    </button>`;}).join('')+`</div>`;
+}
+
+/* ---------- render: detail ---------- */
+function openDetail(id){
+  S.sel=id;if(S.unsubConv){S.unsubConv();S.unsubConv=null;}S.convs=[];
+  S.unsubConv=S.store.onConversas(id,list=>{S.convs=list;if(S.sel===id)renderDetail();});
+  renderDetail();$('#panel').classList.add('open');$('#scrim').classList.add('open');$('#panel').setAttribute('aria-hidden','false');
+  setTimeout(()=>{const b=$('#panel .iconbtn');if(b)b.focus();},50);
+}
+function closeDetail(){S.sel=null;if(S.unsubConv){S.unsubConv();S.unsubConv=null;}$('#panel').classList.remove('open');$('#scrim').classList.remove('open');$('#panel').setAttribute('aria-hidden','true');}
+function renderDetail(){
+  const c=S.clients.find(x=>x.id===S.sel);const p=$('#panel');
+  if(!c){p.innerHTML='';closeDetail();return;}
+  const st=statusOf(c),prox=nextDate(c),hoje=todayStr();
+  const since=c.ultimoContato?diffDays(c.ultimoContato,hoje):null;
+  const last=c.ultimaConversa;const wa=waLink(c.telefone);
+  const dates=(c.datasImportantes||[]).map(dt=>({dt,n:nextOccurrence(dt)})).filter(x=>x.n).sort((a,b)=>a.n<b.n?-1:1);
+  p.innerHTML=`
+  <div class="ph">
+    <div class="row"><div><div class="name">${h(c.nome)}</div><div class="firm">${h([c.empresa,c.assunto].filter(Boolean).join(' · '))}</div></div><button class="iconbtn" data-closepanel aria-label="Fechar painel">✕</button></div>
+    <div class="pulse">
+      <div><div class="k">Situação</div><div class="v ${st.cls}">${h(st.label)}</div></div>
+      <div><div class="k">Último contato</div><div class="v">${since==null?'—':(since===0?'hoje':since+' d atrás')}</div></div>
+      <div><div class="k">Próximo</div><div class="v">${c.status==='pausado'?'—':fmt(prox)}</div></div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" data-conv>Registrar conversa</button>
+      ${c.status!=='pausado'?`<button class="btn" data-snooze="7">Adiar 7 dias</button>`:''}
+      ${wa?`<a class="btn" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>`:''}
+      <button class="btn" data-edit>Editar</button>
+    </div>
+  </div>
+  <div class="pb">
+    ${c.exemplo?`<div class="quiet">Este é um cliente de exemplo, só para mostrar como a página fica preenchida. Exclua-o em <b>Editar → Excluir cliente</b> quando quiser.</div>`:''}
+    <div class="sec"><h3>Ritmo</h3><div class="box"><dl class="kv">
+      <dt>Falar a cada</dt><dd>${h(c.cadenciaDias||30)} dias</dd>
+      <dt>Canal preferido</dt><dd>${h(c.canal||'—')}</dd>
+      <dt>Telefone</dt><dd>${h(c.telefone||'—')}</dd>
+      <dt>E-mail</dt><dd>${h(c.email||'—')}</dd>
+    </dl></div></div>
+    <div class="sec last"><h3>Última conversa ${last?`<span style="text-transform:none;letter-spacing:0">${fmt(last.data,true)}</span>`:''}</h3>
+      ${last?`<div class="box">
+        <div class="date"><span class="chip neutral">${h(last.canal||'')}</span>${last.plaud?`<span class="plaud">● Plaud · ${h(last.plaud.nome)}${last.plaud.duracao?' · '+durTxt(last.plaud.duracao):''}</span>`:''}</div>
+        <div class="md">${md(last.resumo)}</div>
+        ${(last.prometi||last.prometeu)?`<div class="promise">${last.prometi?`<div><div class="k">Eu prometi</div>${h(last.prometi)}</div>`:''}${last.prometeu?`<div><div class="k">Cliente ficou de</div>${h(last.prometeu)}</div>`:''}</div>`:''}
+        ${last.proximoAssunto?`<div class="promise" style="grid-template-columns:1fr"><div><div class="k">Da próxima vez, começar por</div>${h(last.proximoAssunto)}</div></div>`:''}
+      </div>`:`<div class="quiet">Nenhuma conversa registrada ainda. Depois do próximo contato, registre o que foi dito: é isso que faz a próxima conversa começar do ponto certo.</div>`}
+    </div>
+    ${c.pessoal?`<div class="sec"><h3>Lado pessoal</h3><div class="box personal">${h(c.pessoal)}</div></div>`:''}
+    ${dates.length?`<div class="sec dates"><h3>Datas que importam</h3><div class="box"><ul>${dates.map(x=>{const d=diffDays(hoje,x.n);return `<li><span>${h(x.dt.rotulo)}${x.dt.anual?' <span class="chip neutral">anual</span>':''}</span><span class="${d<=7?'soon':''}">${fmt(x.n,true)}${d===0?' · hoje':(d>0&&d<=7?' · em '+d+' d':'')}</span></li>`;}).join('')}</ul></div></div>`:''}
+    <div class="sec"><h3>Histórico <span style="text-transform:none;letter-spacing:0">${S.convs.length?S.convs.length+(S.convs.length===1?' conversa':' conversas'):''}</span></h3>
+      <div class="hist">${S.convs.length?S.convs.map(v=>`<details class="hitem"><summary><b>${fmt(v.data,true)} · ${h(v.canal||'')}</b><span>${v.plaud?'● Plaud':''}</span></summary><div class="body md">${md(v.resumo)}</div>${(v.prometi||v.prometeu||v.proximoAssunto)?`<div class="promise">${v.prometi?`<div><div class="k">Eu prometi</div>${h(v.prometi)}</div>`:''}${v.prometeu?`<div><div class="k">Cliente ficou de</div>${h(v.prometeu)}</div>`:''}${v.proximoAssunto?`<div><div class="k">Retomar por</div>${h(v.proximoAssunto)}</div>`:''}</div>`:''}<div class="tools"><button class="btn sm danger" data-delconv="${h(v.id)}">Excluir registro</button></div></details>`).join(''):`<div class="aempty">Sem registros.</div>`}</div>
+    </div>
+  </div>`;
+  p.querySelector('[data-closepanel]').addEventListener('click',closeDetail);
+  p.querySelector('[data-conv]').addEventListener('click',()=>openConvForm(c));
+  p.querySelector('[data-edit]').addEventListener('click',()=>openClientForm(c));
+  const sn=p.querySelector('[data-snooze]');if(sn)sn.addEventListener('click',async()=>{const body=stripId(c);body.proximoContato=addDays(prox<hoje?hoje:prox,7);body.atualizadoEm=new Date().toISOString();await S.store.saveClient(c.id,body);toast('Próximo contato: '+fmt(body.proximoContato,true));});
+  p.querySelectorAll('[data-delconv]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Excluir este registro de conversa?'))return;await S.store.deleteConversa(c.id,b.dataset.delconv);toast('Registro excluído');}));
+}
+const stripId=c=>{const o=Object.assign({},c);delete o.id;return o;};
+
+/* ---------- client form ---------- */
+function dateRow(dt){
+  const w=document.createElement('div');w.className='drow';
+  w.innerHTML=`<input type="text" placeholder="Aniversário, audiência, vencimento…" value="${h(dt&&dt.rotulo||'')}" aria-label="Descrição da data"><input type="date" value="${h(dt&&dt.data||'')}" aria-label="Data"><label><input type="checkbox" ${dt&&dt.anual?'checked':''}> anual</label><button type="button" class="iconbtn" aria-label="Remover data">✕</button>`;
+  w.querySelector('.iconbtn').addEventListener('click',()=>w.remove());return w;
+}
+function openClientForm(c){
+  S.editingId=c?c.id:null;
+  $('#dlgClientTitle').textContent=c?'Editar cliente':'Novo cliente';
+  $('#c_nome').value=c?c.nome||'':'';$('#c_empresa').value=c?c.empresa||'':'';$('#c_assunto').value=c?c.assunto||'':'';
+  $('#c_cad').value=String(c&&c.cadenciaDias||30);if($('#c_cad').value!==String(c&&c.cadenciaDias||30)){$('#c_cad').value='30';}
+  $('#c_canal').value=c&&c.canal||'WhatsApp';$('#c_status').value=c&&c.status||'ativo';
+  $('#c_tel').value=c?c.telefone||'':'';$('#c_email').value=c?c.email||'':'';$('#c_pessoal').value=c?c.pessoal||'':'';
+  const dl=$('#c_datas');dl.innerHTML='';(c&&c.datasImportantes||[]).forEach(dt=>dl.appendChild(dateRow(dt)));
+  $('#delClient').hidden=!c;
+  $('#dlgClient').showModal();$('#c_nome').focus();
+}
+$('#addDate').addEventListener('click',()=>{$('#c_datas').appendChild(dateRow(null));});
+$('#formClient').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const prev=S.editingId?S.clients.find(x=>x.id===S.editingId):null;
+  const body=Object.assign({},prev?stripId(prev):{criadoEm:new Date().toISOString()},{
+    nome:$('#c_nome').value.trim(),empresa:$('#c_empresa').value.trim(),assunto:$('#c_assunto').value.trim(),
+    cadenciaDias:+$('#c_cad').value,canal:$('#c_canal').value,status:$('#c_status').value,
+    telefone:$('#c_tel').value.trim(),email:$('#c_email').value.trim(),pessoal:$('#c_pessoal').value.trim(),
+    datasImportantes:[...$('#c_datas').querySelectorAll('.drow')].map(r=>{const i=r.querySelectorAll('input');return {rotulo:i[0].value.trim(),data:i[1].value,anual:i[2].checked};}).filter(d=>d.rotulo&&d.data),
+    atualizadoEm:new Date().toISOString()
+  });
+  if(prev&&prev.exemplo)delete body.exemplo;
+  if(!body.nome)return;
+  if(!prev){body.ultimoContato=null;body.proximoContato=todayStr();body.ultimaConversa=null;}
+  else if(prev.cadenciaDias!==body.cadenciaDias&&prev.ultimoContato){body.proximoContato=addDays(prev.ultimoContato,body.cadenciaDias);}
+  try{const id=await S.store.saveClient(S.editingId,body);$('#dlgClient').close();toast(prev?'Cliente atualizado':'Cliente cadastrado');if(!prev)openDetail(id);}
+  catch(err){toast('Não foi possível salvar: '+(err&&err.message||err));}
+});
+$('#delClient').addEventListener('click',async()=>{
+  const c=S.clients.find(x=>x.id===S.editingId);if(!c)return;
+  if(!confirm('Excluir '+c.nome+' e todo o histórico de conversas?'))return;
+  await S.store.deleteClient(c.id);$('#dlgClient').close();closeDetail();toast('Cliente excluído');
+});
+
+/* ---------- conversation form + Plaud ---------- */
+const P={client:null,selected:null,results:[]};
+function openConvForm(c){
+  P.client=c;P.selected=null;P.results=[];
+  $('#convSub').textContent=c.nome+(c.empresa?' · '+c.empresa:'');
+  $('#v_data').value=todayStr();$('#v_canal').value=c.canal||'WhatsApp';$('#v_prox').value=addDays(todayStr(),+c.cadenciaDias||30);
+  $('#v_resumo').value='';$('#v_prometi').value='';$('#v_prometeu').value='';$('#v_proximo').value='';
+  renderPlaud();$('#dlgConv').showModal();
+}
+$('#v_data').addEventListener('change',()=>{if(P.client&&$('#v_data').value)$('#v_prox').value=addDays($('#v_data').value,+P.client.cadenciaDias||30);});
+function payloadOf(res){let p=res&&res.payload;if(p===undefined&&res&&Array.isArray(res.content)){const t=res.content.find(b=>b.type==='text');p=t?t.text:undefined;}if(typeof p==='string'){try{p=JSON.parse(p);}catch(e){}}return p;}
+function mcpMsg(e){
+  const code=e&&e.code;
+  if(code==='server_not_connected')return 'O Plaud não está conectado à sua conta do claude.ai. Adicione o conector em Configurações → Conectores e recarregue a página.';
+  if(code==='needs_reauth')return 'A conexão com o Plaud expirou. Reconecte o Plaud em Configurações → Conectores.';
+  if(code==='not_granted'||code==='blocked_by_policy')return 'Esta visualização não tem permissão para consultar o Plaud.';
+  if(code==='tool_error')return 'O Plaud respondeu com erro: '+(e.message||'');
+  if(code==='rate_limited'||code==='server_unavailable')return 'O Plaud está indisponível no momento. Tente de novo em instantes.';
+  return 'Não foi possível consultar o Plaud'+(e&&e.message?': '+e.message:'.');
+}
+function renderPlaud(){
+  const body=$('#plaudBody'),st=$('#plaudStatus');
+  if(!S.mcp){st.textContent='indisponível nesta visualização';body.innerHTML=`<div class="pmsg">Abra a página pelo claude.ai com o conector Plaud ativo para buscar gravações. Você pode registrar a conversa normalmente sem isso.</div>`;return;}
+  st.textContent='';
+  if(P.selected){
+    body.innerHTML=`<div class="selrec"><span><b>${h(P.selected.name)}</b> · ${fmt(P.selected.start_at)} · ${durTxt(P.selected.duration)}</span><span style="display:flex;gap:6px"><button type="button" class="btn sm primary" id="plaudImport">Trazer resumo</button><button type="button" class="btn sm" id="plaudClear">Trocar</button></span></div><div class="pmsg" id="plaudMsg"></div>`;
+    $('#plaudClear').addEventListener('click',()=>{P.selected=null;renderPlaud();});
+    $('#plaudImport').addEventListener('click',importSummary);return;
+  }
+  body.innerHTML=`<div class="psearch"><input id="plaudQ" placeholder="Nome como aparece no título da gravação" value="${h(firstName(P.client&&P.client.nome))}" aria-label="Buscar gravação"><button type="button" class="btn sm" id="plaudSearch">Buscar</button></div><div class="plist" id="plaudList"></div><div class="pmsg" id="plaudMsg">Dica: nomeie as gravações no Plaud com o nome do cliente para encontrá-las aqui.</div>`;
+  $('#plaudSearch').addEventListener('click',searchPlaud);
+  $('#plaudQ').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchPlaud();}});
+  if(P.results.length)paintResults();
+}
+function paintResults(){
+  const l=$('#plaudList');if(!l)return;
+  l.innerHTML=P.results.map((r,i)=>`<button type="button" class="pitem" data-i="${i}"><b>${h(r.name)}</b><span>${fmt(r.start_at||r.created_at)} · ${durTxt(r.duration)}</span></button>`).join('');
+  l.querySelectorAll('.pitem').forEach(b=>b.addEventListener('click',()=>{P.selected=P.results[+b.dataset.i];renderPlaud();}));
+}
+async function searchPlaud(){
+  const q=$('#plaudQ').value.trim(),msg=$('#plaudMsg'),btn=$('#plaudSearch');
+  btn.disabled=true;msg.className='pmsg';msg.textContent='Buscando no Plaud…';
+  try{
+    const input=q?{query:q}:{page:1,page_size:20};
+    const res=await S.mcp.callTool('Plaud','list_files',input,{cache:{staleTime:120000}});
+    const p=payloadOf(res);const arr=p&&Array.isArray(p.data)?p.data:(Array.isArray(p)?p:[]);
+    P.results=arr.slice(0,40);paintResults();
+    msg.textContent=P.results.length?P.results.length+(P.results.length===1?' gravação encontrada.':' gravações encontradas.')+(p&&p.truncated?' A busca foi limitada; refine o nome.':''):'Nenhuma gravação com esse nome. Tente outro termo ou deixe em branco para ver as mais recentes.';
+  }catch(e){msg.className='pmsg err';msg.textContent=mcpMsg(e);}
+  btn.disabled=false;
+}
+async function importSummary(){
+  const msg=$('#plaudMsg'),btn=$('#plaudImport');btn.disabled=true;msg.className='pmsg';msg.textContent='Lendo o resumo…';
+  try{
+    const res=await S.mcp.callTool('Plaud','get_note',{file_id:P.selected.id},{cache:{staleTime:600000}});
+    const p=payloadOf(res);const notes=Array.isArray(p)?p:(p&&Array.isArray(p.data)?p.data:[]);
+    const note=notes.find(n=>n.data_type==='auto_sum_note')||notes.find(n=>n.data_content)||null;
+    if(!note||!note.data_content){msg.textContent='Esta gravação ainda não tem resumo no Plaud. Gere o resumo no aplicativo e tente de novo.';btn.disabled=false;return;}
+    const ta=$('#v_resumo');ta.value=(ta.value.trim()?ta.value.trim()+'\n\n':'')+note.data_content.trim();
+    msg.textContent='Resumo trazido para o campo abaixo. Edite à vontade: o que fica aqui é o que você vai reler antes da próxima conversa.';
+    toast('Resumo do Plaud importado');
+  }catch(e){msg.className='pmsg err';msg.textContent=mcpMsg(e);}
+  btn.disabled=false;
+}
+$('#formConv').addEventListener('submit',async e=>{
+  e.preventDefault();const c=P.client;if(!c)return;
+  const conv={data:$('#v_data').value,canal:$('#v_canal').value,resumo:$('#v_resumo').value.trim(),prometi:$('#v_prometi').value.trim(),prometeu:$('#v_prometeu').value.trim(),proximoAssunto:$('#v_proximo').value.trim(),
+    plaud:P.selected?{id:P.selected.id,nome:P.selected.name,inicio:P.selected.start_at||P.selected.created_at||null,duracao:P.selected.duration||null}:null,criadoEm:new Date().toISOString()};
+  if(!conv.data||!conv.resumo)return;
+  try{
+    await S.store.addConversa(c.id,conv);
+    const fresh=S.clients.find(x=>x.id===c.id)||c;const body=stripId(fresh);
+    if(!body.ultimoContato||conv.data>=body.ultimoContato){body.ultimoContato=conv.data;body.ultimaConversa=conv;body.proximoContato=$('#v_prox').value||addDays(conv.data,+body.cadenciaDias||30);}
+    body.atualizadoEm=new Date().toISOString();
+    await S.store.saveClient(c.id,body);
+    $('#dlgConv').close();toast('Conversa registrada. Próximo contato: '+fmt(body.proximoContato,true));
+  }catch(err){toast('Não foi possível salvar: '+(err&&err.message||err));}
+});
+
+/* ---------- wiring ---------- */
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
+$('#newClient').addEventListener('click',()=>openClientForm(null));
+$('#scrim').addEventListener('click',closeDetail);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.sel&&!document.querySelector('dialog[open]'))closeDetail();});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(b)openDetail(b.dataset.open);});
+$('#q').addEventListener('input',()=>{S.q=$('#q').value.trim().toLowerCase();renderList();});
+$('#filters').addEventListener('click',e=>{const b=e.target.closest('.fbtn');if(!b)return;S.filter=b.dataset.f;document.querySelectorAll('.fbtn').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));renderList();});
+function renderAll(){renderMeta();renderAgenda();renderList();if(S.sel)renderDetail();}
+function start(store){
+  S.store=store;
+  store.onClients(list=>{S.clients=list;renderAll();});
+}
+renderAll();
+(async()=>{
+  const db=window.claude&&typeof window.claude.use==='function'?await window.claude.use('db'):null;
+  if(db){start(DbStore(db));}
+  else{
+    start(LocalStore());
+    const b=$('#banner');b.hidden=false;b.textContent='Armazenamento compartilhado indisponível nesta visualização: os dados ficam apenas neste navegador. Abra a página pelo claude.ai para que a equipe veja a mesma carteira.';
+  }
+  S.mcp=window.claude&&typeof window.claude.use==='function'?await window.claude.use('mcp'):null;S.mcpChecked=true;
+  if(document.querySelector('#dlgConv[open]'))renderPlaud();
+})();
+})();
+</script>
