@@ -41,6 +41,7 @@
   --shadow:0 10px 30px rgba(0,0,0,.45);
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{color-scheme:light dark}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -214,6 +215,11 @@ dialog::backdrop{background:rgba(10,14,28,.5)}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;transition:.2s;z-index:50;pointer-events:none;max-width:calc(100% - 32px)}
 .toast.show{opacity:1;transform:translateX(-50%)}
 .banner{background:var(--due-bg);color:var(--due);border-radius:8px;padding:8px 12px;font-size:13.5px;margin-bottom:14px}
+.resp{font-size:12px;color:var(--muted)}
+.agendaline{margin-top:10px;font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.agendaline a{color:var(--accent)}
+#respSel{appearance:auto;background:var(--surface)}
+.msgarea{min-height:200px!important}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
@@ -249,6 +255,7 @@ dialog::backdrop{background:rgba(10,14,28,.5)}
           <button class="fbtn" data-f="ok" aria-pressed="false">Em dia</button>
           <button class="fbtn" data-f="pause" aria-pressed="false">Pausados</button>
         </div>
+        <select id="respSel" class="fbtn" aria-label="Filtrar por responsável"><option value="">Toda a equipe</option></select>
         <button class="btn primary" id="newClient">+ Novo cliente</button>
       </div>
       <div id="list"></div>
@@ -267,7 +274,10 @@ dialog::backdrop{background:rgba(10,14,28,.5)}
         <div class="f"><label for="c_nome">Nome</label><input id="c_nome" required autocomplete="off"></div>
         <div class="f"><label for="c_empresa">Empresa / grupo</label><input id="c_empresa" autocomplete="off"></div>
       </div>
-      <div class="f"><label for="c_assunto">Do que cuidamos hoje</label><input id="c_assunto" placeholder="Ex.: planejamento tributário e constituição de holding" autocomplete="off"></div>
+      <div class="two">
+        <div class="f"><label for="c_resp">Responsável no escritório</label><input id="c_resp" list="respList" placeholder="Quem cuida desta relação" autocomplete="off"><datalist id="respList"></datalist></div>
+        <div class="f"><label for="c_assunto">Do que cuidamos hoje</label><input id="c_assunto" placeholder="Ex.: planejamento tributário e constituição de holding" autocomplete="off"></div>
+      </div>
       <div class="three">
         <div class="f"><label for="c_cad">Falar a cada</label>
           <select id="c_cad">
@@ -322,6 +332,14 @@ dialog::backdrop{background:rgba(10,14,28,.5)}
     </div>
     <div class="df"><div class="right"><button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn primary">Salvar conversa</button></div></div>
   </form>
+</dialog>
+
+<dialog id="dlgMsg">
+  <div class="dh"><div><h2>Mensagem para o cliente</h2><p id="msgSub"></p></div><button type="button" class="iconbtn" data-close aria-label="Fechar">✕</button></div>
+  <div class="db">
+    <div class="f"><label for="m_text">Texto, em linguagem simples. Edite antes de enviar.</label><textarea id="m_text" class="msgarea"></textarea><span class="hint" id="msgHint"></span></div>
+  </div>
+  <div class="df"><button type="button" class="btn" id="msgRegen">Escrever de novo</button><div class="right"><button type="button" class="btn" id="msgCopy">Copiar</button><a class="btn primary" id="msgWa" target="_blank" rel="noopener">Abrir no WhatsApp</a></div></div>
 </dialog>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -412,11 +430,14 @@ function DbStore(db){
 }
 
 /* ---------- state ---------- */
-const S={clients:[],filter:'todos',q:'',sel:null,store:null,mcp:null,mcpChecked:false,unsubConv:null,convs:[],editingId:null};
+const S={clients:[],filter:'todos',q:'',resp:'',sel:null,store:null,mcp:null,sample:null,mcpChecked:false,unsubConv:null,convs:[],editingId:null};
+try{S.resp=localStorage.getItem('lacos.resp')||'';}catch(e){}
+const respOk=c=>!S.resp||(c.responsavel||'')===S.resp;
+const TZ='America/Sao_Paulo';
 
 /* ---------- render: header ---------- */
 function renderMeta(){
-  const act=S.clients.filter(c=>c.status!=='pausado');
+  const act=S.clients.filter(c=>c.status!=='pausado'&&respOk(c));
   const late=act.filter(c=>statusOf(c).key==='late').length;
   const due=act.filter(c=>statusOf(c).key==='due').length;
   $('#meta').innerHTML=`<span><b>${S.clients.length}</b> ${S.clients.length===1?'cliente':'clientes'}</span>`+
@@ -429,12 +450,12 @@ function renderMeta(){
 function renderAgenda(){
   const hoje=todayStr();
   $('#agendaSub').textContent=weekday(hoje).replace(/^./,c=>c.toUpperCase())+', '+fmt(hoje,true);
-  const act=S.clients.filter(c=>c.status!=='pausado').map(c=>Object.assign({st:statusOf(c),prox:nextDate(c)},c));
+  const act=S.clients.filter(c=>c.status!=='pausado'&&respOk(c)).map(c=>Object.assign({st:statusOf(c),prox:nextDate(c)},c));
   const late=act.filter(c=>c.st.key==='late').sort((a,b)=>a.prox<b.prox?-1:1);
   const today=act.filter(c=>c.st.d===0);
   const week=act.filter(c=>c.st.d>0&&c.st.d<=7).sort((a,b)=>a.prox<b.prox?-1:1);
   const special=[];
-  for(const c of S.clients){for(const dt of (c.datasImportantes||[])){const n=nextOccurrence(dt);if(!n)continue;const d=diffDays(hoje,n);if(d>=0&&d<=30)special.push({c,dt,n,d});}}
+  for(const c of S.clients){if(!respOk(c))continue;for(const dt of (c.datasImportantes||[])){const n=nextOccurrence(dt);if(!n)continue;const d=diffDays(hoje,n);if(d>=0&&d<=30)special.push({c,dt,n,d});}}
   special.sort((a,b)=>a.d-b.d);
   const row=(c,when)=>`<button class="arow ${c.st.cls}" data-open="${h(c.id)}"><span class="stripe"></span><span class="who"><b>${h(c.nome)}</b><span>${h(c.ultimaConversa&&c.ultimaConversa.proximoAssunto||c.assunto||c.empresa||'')}</span></span><span class="when">${h(when)}</span></button>`;
   const sec=(cls,title,items,empty)=>`<div class="asec"><div class="lbl ${cls}"><span>${title}</span><span>${items.length||''}</span></div>${items.length?items.join(''):`<div class="aempty">${empty}</div>`}</div>`;
@@ -452,8 +473,9 @@ function renderAgenda(){
 /* ---------- render: list ---------- */
 function matches(c){
   const st=statusOf(c).key;
+  if(!respOk(c))return false;
   if(S.filter!=='todos'&&st!==S.filter)return false;
-  if(S.q){const t=(c.nome+' '+(c.empresa||'')+' '+(c.assunto||'')).toLowerCase();if(!t.includes(S.q))return false;}
+  if(S.q){const t=(c.nome+' '+(c.empresa||'')+' '+(c.assunto||'')+' '+(c.responsavel||'')).toLowerCase();if(!t.includes(S.q))return false;}
   return true;
 }
 function renderList(){
@@ -468,7 +490,7 @@ function renderList(){
   el.innerHTML=`<div class="cards">`+rows.map(({c,st})=>{
     const last=c.ultimaConversa;
     return `<button class="card ${st.cls}" data-open="${h(c.id)}">
-      <div class="head"><div><div class="name">${h(c.nome)}</div><div class="firm">${h(c.empresa||'')}</div></div><span class="chip ${st.cls}">${h(st.label)}</span></div>
+      <div class="head"><div><div class="name">${h(c.nome)}</div><div class="firm">${h([c.empresa,c.responsavel].filter(Boolean).join(' · '))}</div></div><span class="chip ${st.cls}">${h(st.label)}</span></div>
       <div class="topic">${h(last&&last.proximoAssunto?'Retomar: '+last.proximoAssunto:(c.assunto||'Sem assunto definido'))}</div>
       <div class="foot"><span>${last?'Última conversa '+fmt(last.data):(c.ultimoContato?'Último contato '+fmt(c.ultimoContato):'Sem conversa registrada')}</span><span class="cad">a cada ${h(c.cadenciaDias||30)} d</span></div>
       ${c.exemplo?'<span class="chip example" style="position:absolute;right:12px;bottom:40px">Exemplo</span>':''}
@@ -502,12 +524,15 @@ function renderDetail(){
       <button class="btn primary" data-conv>Registrar conversa</button>
       ${c.status!=='pausado'?`<button class="btn" data-snooze="7">Adiar 7 dias</button>`:''}
       ${wa?`<a class="btn" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>`:''}
+      ${last?`<button class="btn" data-msg>Mensagem ao cliente</button>`:''}
       <button class="btn" data-edit>Editar</button>
     </div>
+    ${S.mcp&&c.status!=='pausado'?`<div class="agendaline">${c.agendaEvento&&c.agendaEvento.id?`<span>Na sua agenda: <a href="${h(c.agendaEvento.link||'#')}" target="_blank" rel="noopener">${fmt(c.agendaEvento.data,true)}</a></span>${c.agendaEvento.data!==prox?`<button class="btn sm" data-cal>Atualizar para ${fmt(prox)}</button>`:''}`:`<button class="btn sm" data-cal>Lembrar no Google Calendar em ${fmt(prox)}</button>`}</div>`:''}
   </div>
   <div class="pb">
     ${c.exemplo?`<div class="quiet">Este é um cliente de exemplo, só para mostrar como a página fica preenchida. Exclua-o em <b>Editar → Excluir cliente</b> quando quiser.</div>`:''}
     <div class="sec"><h3>Ritmo</h3><div class="box"><dl class="kv">
+      <dt>Responsável</dt><dd>${h(c.responsavel||'—')}</dd>
       <dt>Falar a cada</dt><dd>${h(c.cadenciaDias||30)} dias</dd>
       <dt>Canal preferido</dt><dd>${h(c.canal||'—')}</dd>
       <dt>Telefone</dt><dd>${h(c.telefone||'—')}</dd>
@@ -530,6 +555,8 @@ function renderDetail(){
   p.querySelector('[data-closepanel]').addEventListener('click',closeDetail);
   p.querySelector('[data-conv]').addEventListener('click',()=>openConvForm(c));
   p.querySelector('[data-edit]').addEventListener('click',()=>openClientForm(c));
+  const mb=p.querySelector('[data-msg]');if(mb)mb.addEventListener('click',()=>openMsg(c,c.ultimaConversa));
+  const cb=p.querySelector('[data-cal]');if(cb)cb.addEventListener('click',()=>agendar(c,cb));
   const sn=p.querySelector('[data-snooze]');if(sn)sn.addEventListener('click',async()=>{const body=stripId(c);body.proximoContato=addDays(prox<hoje?hoje:prox,7);body.atualizadoEm=new Date().toISOString();await S.store.saveClient(c.id,body);toast('Próximo contato: '+fmt(body.proximoContato,true));});
   p.querySelectorAll('[data-delconv]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Excluir este registro de conversa?'))return;await S.store.deleteConversa(c.id,b.dataset.delconv);toast('Registro excluído');}));
 }
@@ -544,7 +571,7 @@ function dateRow(dt){
 function openClientForm(c){
   S.editingId=c?c.id:null;
   $('#dlgClientTitle').textContent=c?'Editar cliente':'Novo cliente';
-  $('#c_nome').value=c?c.nome||'':'';$('#c_empresa').value=c?c.empresa||'':'';$('#c_assunto').value=c?c.assunto||'':'';
+  $('#c_nome').value=c?c.nome||'':'';$('#c_empresa').value=c?c.empresa||'':'';$('#c_resp').value=c?c.responsavel||'':(S.resp||'');$('#c_assunto').value=c?c.assunto||'':'';
   $('#c_cad').value=String(c&&c.cadenciaDias||30);if($('#c_cad').value!==String(c&&c.cadenciaDias||30)){$('#c_cad').value='30';}
   $('#c_canal').value=c&&c.canal||'WhatsApp';$('#c_status').value=c&&c.status||'ativo';
   $('#c_tel').value=c?c.telefone||'':'';$('#c_email').value=c?c.email||'':'';$('#c_pessoal').value=c?c.pessoal||'':'';
@@ -557,7 +584,7 @@ $('#formClient').addEventListener('submit',async e=>{
   e.preventDefault();
   const prev=S.editingId?S.clients.find(x=>x.id===S.editingId):null;
   const body=Object.assign({},prev?stripId(prev):{criadoEm:new Date().toISOString()},{
-    nome:$('#c_nome').value.trim(),empresa:$('#c_empresa').value.trim(),assunto:$('#c_assunto').value.trim(),
+    nome:$('#c_nome').value.trim(),empresa:$('#c_empresa').value.trim(),responsavel:$('#c_resp').value.trim(),assunto:$('#c_assunto').value.trim(),
     cadenciaDias:+$('#c_cad').value,canal:$('#c_canal').value,status:$('#c_status').value,
     telefone:$('#c_tel').value.trim(),email:$('#c_email').value.trim(),pessoal:$('#c_pessoal').value.trim(),
     datasImportantes:[...$('#c_datas').querySelectorAll('.drow')].map(r=>{const i=r.querySelectorAll('input');return {rotulo:i[0].value.trim(),data:i[1].value,anual:i[2].checked};}).filter(d=>d.rotulo&&d.data),
@@ -589,12 +616,13 @@ $('#v_data').addEventListener('change',()=>{if(P.client&&$('#v_data').value)$('#
 function payloadOf(res){let p=res&&res.payload;if(p===undefined&&res&&Array.isArray(res.content)){const t=res.content.find(b=>b.type==='text');p=t?t.text:undefined;}if(typeof p==='string'){try{p=JSON.parse(p);}catch(e){}}return p;}
 function mcpMsg(e){
   const code=e&&e.code;
-  if(code==='server_not_connected')return 'O Plaud não está conectado à sua conta do claude.ai. Adicione o conector em Configurações → Conectores e recarregue a página.';
-  if(code==='needs_reauth')return 'A conexão com o Plaud expirou. Reconecte o Plaud em Configurações → Conectores.';
-  if(code==='not_granted'||code==='blocked_by_policy')return 'Esta visualização não tem permissão para consultar o Plaud.';
-  if(code==='tool_error')return 'O Plaud respondeu com erro: '+(e.message||'');
-  if(code==='rate_limited'||code==='server_unavailable')return 'O Plaud está indisponível no momento. Tente de novo em instantes.';
-  return 'Não foi possível consultar o Plaud'+(e&&e.message?': '+e.message:'.');
+  const sv=(e&&e.server)||'O conector';
+  if(code==='server_not_connected')return sv+' não está conectado à sua conta do claude.ai. Adicione o conector em Configurações → Conectores e recarregue a página.';
+  if(code==='needs_reauth')return 'A conexão com '+sv+' expirou. Reconecte em Configurações → Conectores.';
+  if(code==='not_granted'||code==='blocked_by_policy')return 'Esta visualização não tem permissão para usar '+sv+'.';
+  if(code==='tool_error')return sv+' respondeu com erro: '+(e.message||'');
+  if(code==='rate_limited'||code==='server_unavailable')return sv+' está indisponível no momento. Tente de novo em instantes.';
+  return 'Não foi possível concluir a chamada a '+sv+(e&&e.message?': '+e.message:'.');
 }
 function renderPlaud(){
   const body=$('#plaudBody'),st=$('#plaudStatus');
@@ -605,7 +633,7 @@ function renderPlaud(){
     $('#plaudClear').addEventListener('click',()=>{P.selected=null;renderPlaud();});
     $('#plaudImport').addEventListener('click',importSummary);return;
   }
-  body.innerHTML=`<div class="psearch"><input id="plaudQ" placeholder="Nome como aparece no título da gravação" value="${h(firstName(P.client&&P.client.nome))}" aria-label="Buscar gravação"><button type="button" class="btn sm" id="plaudSearch">Buscar</button></div><div class="plist" id="plaudList"></div><div class="pmsg" id="plaudMsg">Dica: nomeie as gravações no Plaud com o nome do cliente para encontrá-las aqui.</div>`;
+  body.innerHTML=`<div class="psearch"><input id="plaudQ" placeholder="Nome como aparece no título da gravação" value="${h(firstName(P.client&&P.client.nome))}" aria-label="Buscar gravação"><button type="button" class="btn sm" id="plaudSearch">Buscar</button></div><div class="plist" id="plaudList"></div><div class="pmsg" id="plaudMsg">Padrão sugerido para o título no Plaud: <b>Consulta: Nome do cliente - assunto</b>. Se o título não tiver o nome, a busca pode olhar dentro dos resumos recentes.</div>`;
   $('#plaudSearch').addEventListener('click',searchPlaud);
   $('#plaudQ').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchPlaud();}});
   if(P.results.length)paintResults();
@@ -623,9 +651,29 @@ async function searchPlaud(){
     const res=await S.mcp.callTool('Plaud','list_files',input,{cache:{staleTime:120000}});
     const p=payloadOf(res);const arr=p&&Array.isArray(p.data)?p.data:(Array.isArray(p)?p:[]);
     P.results=arr.slice(0,40);paintResults();
-    msg.textContent=P.results.length?P.results.length+(P.results.length===1?' gravação encontrada.':' gravações encontradas.')+(p&&p.truncated?' A busca foi limitada; refine o nome.':''):'Nenhuma gravação com esse nome. Tente outro termo ou deixe em branco para ver as mais recentes.';
+    const n=P.results.length;
+    msg.innerHTML=(n?n+(n===1?' gravação encontrada pelo título.':' gravações encontradas pelo título.')+(p&&p.truncated?' A busca foi limitada; refine o nome.':''):'Nenhuma gravação com esse nome no título.')+(q?' <button type="button" class="btn sm" id="plaudDeep">Procurar dentro dos resumos (60 dias)</button>':' Deixe em branco para ver as mais recentes.');
+    const d=$('#plaudDeep');if(d)d.addEventListener('click',()=>deepSearch(q));
   }catch(e){msg.className='pmsg err';msg.textContent=mcpMsg(e);}
   btn.disabled=false;
+}
+async function deepSearch(q){
+  const msg=$('#plaudMsg');const needle=q.toLowerCase();
+  const seen=new Set(P.results.map(r=>r.id));msg.className='pmsg';msg.textContent='Listando gravações recentes…';
+  try{
+    const res=await S.mcp.callTool('Plaud','list_files',{date_from:addDays(todayStr(),-60),date_to:todayStr()},{cache:{staleTime:120000}});
+    const p=payloadOf(res);const all=(p&&Array.isArray(p.data)?p.data:[]).filter(r=>!seen.has(r.id)).sort((a,b)=>(b.start_at||b.created_at||'')<(a.start_at||a.created_at||'')?-1:1).slice(0,25);
+    let found=0;
+    for(let i=0;i<all.length;i++){
+      const r=all[i];msg.textContent='Lendo resumo '+(i+1)+' de '+all.length+'…';
+      let notes=[];
+      try{const nr=await S.mcp.callTool('Plaud','get_note',{file_id:r.id},{cache:{staleTime:600000}});const np=payloadOf(nr);notes=Array.isArray(np)?np:(np&&Array.isArray(np.data)?np.data:[]);}
+      catch(e){if(e&&(e.code==='rate_limited'||e.code==='needs_reauth'||e.code==='server_not_connected'||e.code==='not_granted'))throw e;continue;}
+      const txt=notes.map(x=>x.data_content||'').join('\n').toLowerCase();
+      if(txt.includes(needle)){P.results.push(Object.assign({},r,{name:r.name+'  (nome achado no resumo)'}));found++;paintResults();}
+    }
+    msg.textContent=found?found+(found===1?' gravação encontrada pelo conteúdo do resumo.':' gravações encontradas pelo conteúdo dos resumos.'):'Nenhum resumo dos últimos 60 dias menciona "'+q+'".';
+  }catch(e){msg.className='pmsg err';msg.textContent=mcpMsg(e);}
 }
 async function importSummary(){
   const msg=$('#plaudMsg'),btn=$('#plaudImport');btn.disabled=true;msg.className='pmsg';msg.textContent='Lendo o resumo…';
@@ -652,8 +700,94 @@ $('#formConv').addEventListener('submit',async e=>{
     body.atualizadoEm=new Date().toISOString();
     await S.store.saveClient(c.id,body);
     $('#dlgConv').close();toast('Conversa registrada. Próximo contato: '+fmt(body.proximoContato,true));
+    openMsg(Object.assign({id:c.id},body),conv);
   }catch(err){toast('Não foi possível salvar: '+(err&&err.message||err));}
 });
+
+/* ---------- mensagem ao cliente ---------- */
+const M={c:null,conv:null,ctl:null};
+function msgTemplate(c,conv){
+  const quem=c.responsavel?c.responsavel+', do Advogados Costa':'o Advogados Costa';
+  const prox=c.proximoContato||nextDate(c);
+  const lines=['Olá, '+firstName(c.nome)+'! Aqui é '+quem+'.','','Passando para deixar registrado, em poucas palavras, o que conversamos em '+fmt(conv.data,true)+':'];
+  const r=String(conv.resumo||'').replace(/^#+ .*$/gm,'').replace(/\*\*/g,'').replace(/^- \[.\] /gm,'- ').trim().split(/\n\s*\n/)[0];
+  if(r)lines.push(r.length>400?r.slice(0,400).trim()+'…':r);
+  if(conv.prometi)lines.push('','Da minha parte: '+conv.prometi);
+  if(conv.prometeu)lines.push('','Do seu lado: '+conv.prometeu);
+  lines.push('','Volto a falar com você por volta de '+fmt(prox,true)+'. Se surgir qualquer dúvida antes disso, é só me chamar.');
+  return lines.join('\n');
+}
+function msgPrompt(c,conv){
+  const prox=c.proximoContato||nextDate(c);
+  return `Você escreve em nome de ${c.responsavel?c.responsavel+', advogado(a) do escritório Advogados Costa':'o escritório Advogados Costa'} uma mensagem de WhatsApp para o cliente ${firstName(c.nome)}${c.empresa?' ('+c.empresa+')':''}.
+
+Objetivo: depois de uma conversa, deixar o cliente tranquilo e informado, em linguagem simples, sem jargão jurídico, sem siglas e sem números de processo. Tom próximo e cuidadoso, como quem cuida da pessoa, mas profissional. Português do Brasil.
+
+Regras:
+- No máximo 8 linhas curtas. Sem título, sem assinatura formal, sem emojis.
+- Comece cumprimentando pelo primeiro nome.
+- Diga em 2 ou 3 frases o que foi conversado e o que isso significa para ele, na prática.
+- Se houver algo que o advogado prometeu, diga claramente o que e, se houver prazo, quando.
+- Se houver algo que o cliente ficou de fazer, peça com gentileza.
+- Termine dizendo que voltará a falar com ele por volta de ${fmt(prox,true)} e que ele pode chamar antes se precisar.
+- Não invente fatos, prazos ou promessas que não estejam abaixo.
+- Responda apenas com o texto da mensagem.
+
+Data da conversa: ${fmt(conv.data,true)} (${conv.canal||''})
+O que foi conversado:
+${String(conv.resumo||'').slice(0,4000)}
+
+O que o advogado prometeu: ${conv.prometi||'(nada registrado)'}
+O que o cliente ficou de fazer: ${conv.prometeu||'(nada registrado)'}
+${c.pessoal?'Sobre o cliente (use só se ajudar no tom): '+c.pessoal.slice(0,400):''}`;
+}
+function openMsg(c,conv){
+  if(!conv)return;M.c=c;M.conv=conv;
+  $('#msgSub').textContent=c.nome+' · sobre a conversa de '+fmt(conv.data,true);
+  const ta=$('#m_text');ta.value=msgTemplate(c,conv);
+  const wa=waLink(c.telefone);const a=$('#msgWa');
+  const syncWa=()=>{if(wa){a.hidden=false;a.href=wa+'?text='+encodeURIComponent(ta.value);}else a.hidden=true;};
+  ta.oninput=syncWa;syncWa();
+  $('#msgHint').textContent=wa?'':'Sem telefone cadastrado: copie o texto e envie por onde preferir.';
+  $('#dlgMsg').showModal();
+  writeMsg(false);
+}
+async function writeMsg(regen){
+  if(!S.sample)return;
+  const ta=$('#m_text'),hint=$('#msgHint'),btn=$('#msgRegen');
+  if(M.ctl)M.ctl.abort();M.ctl=new AbortController();const ctl=M.ctl;
+  btn.disabled=true;hint.textContent='Escrevendo com o Claude… (o texto de base já está acima)';
+  try{
+    const {text}=await S.sample(msgPrompt(M.c,M.conv),{modelTier:'quick',cache:regen?false:true,signal:ctl.signal,onText:({text})=>{ta.value=text;ta.dispatchEvent(new Event('input'));}});
+    ta.value=text.trim();ta.dispatchEvent(new Event('input'));hint.textContent='Escrito pelo Claude a partir do registro. Revise antes de enviar.';
+  }catch(e){
+    if(e&&e.code==='cancelled')return;
+    if(e&&e.code==='not_granted'){hint.textContent='Sem permissão para usar o Claude nesta visualização. Ficou o texto de base.';S.sample=null;}
+    else if(e&&e.code==='rate_limited'){hint.textContent='Muitas mensagens em pouco tempo. Aguarde um instante e tente "Escrever de novo".';}
+    else hint.textContent='Não foi possível redigir com o Claude'+(e&&e.message?' ('+e.message+')':'')+'. Ficou o texto de base.';
+    if(!ta.value.trim())ta.value=msgTemplate(M.c,M.conv);
+  }finally{if(ctl===M.ctl){btn.disabled=false;M.ctl=null;}}
+}
+$('#msgRegen').addEventListener('click',()=>{if(S.sample)writeMsg(true);else{$('#m_text').value=msgTemplate(M.c,M.conv);$('#m_text').dispatchEvent(new Event('input'));}});
+$('#msgCopy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#m_text').value);toast('Mensagem copiada');}catch(e){$('#m_text').select();toast('Selecione o texto e copie com Ctrl+C');}});
+$('#dlgMsg').addEventListener('close',()=>{if(M.ctl){M.ctl.abort();M.ctl=null;}});
+
+/* ---------- Google Calendar ---------- */
+async function agendar(c,btn){
+  if(!S.mcp)return;const prox=nextDate(c);btn.disabled=true;const old=btn.textContent;btn.textContent='Gravando na agenda…';
+  try{
+    if(c.agendaEvento&&c.agendaEvento.id){
+      try{await S.mcp.callTool('Google Calendar','delete_event',{eventId:c.agendaEvento.id,notificationLevel:'NONE'},{cache:false});}
+      catch(e){if(!(e&&e.code==='tool_error'))throw e;}
+    }
+    const desc=['Lembrete do Laços (Advogados Costa).',c.assunto?'Assunto: '+c.assunto:'',c.ultimaConversa&&c.ultimaConversa.proximoAssunto?'Começar por: '+c.ultimaConversa.proximoAssunto:'',c.canal?'Canal preferido: '+c.canal:'',c.telefone?'Telefone: '+c.telefone:''].filter(Boolean).join('\n');
+    const res=await S.mcp.callTool('Google Calendar','create_event',{summary:'Falar com '+c.nome,startTime:prox+'T09:00:00',endTime:prox+'T09:30:00',timeZone:TZ,description:desc,overrideReminders:[{method:'popup',minutes:0}]},{cache:false});
+    const p=payloadOf(res)||{};
+    const fresh=S.clients.find(x=>x.id===c.id)||c;const body=stripId(fresh);
+    body.agendaEvento={id:p.id||null,link:p.htmlLink||'',data:prox};body.atualizadoEm=new Date().toISOString();
+    await S.store.saveClient(c.id,body);toast('Lembrete criado no Google Calendar para '+fmt(prox,true)+' às 9h');
+  }catch(e){toast(mcpMsg(e).replace('o Plaud','o Google Calendar').replace('O Plaud','O Google Calendar'));btn.disabled=false;btn.textContent=old;}
+}
 
 /* ---------- wiring ---------- */
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
@@ -663,7 +797,14 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.sel&&!document.qu
 document.addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(b)openDetail(b.dataset.open);});
 $('#q').addEventListener('input',()=>{S.q=$('#q').value.trim().toLowerCase();renderList();});
 $('#filters').addEventListener('click',e=>{const b=e.target.closest('.fbtn');if(!b)return;S.filter=b.dataset.f;document.querySelectorAll('.fbtn').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));renderList();});
-function renderAll(){renderMeta();renderAgenda();renderList();if(S.sel)renderDetail();}
+function renderResp(){
+  const names=[...new Set(S.clients.map(c=>(c.responsavel||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const sel=$('#respSel');sel.innerHTML='<option value="">Toda a equipe</option>'+names.map(n=>`<option value="${h(n)}">${h(n)}</option>`).join('');
+  if(S.resp&&!names.includes(S.resp)){S.resp='';try{localStorage.removeItem('lacos.resp');}catch(e){}}
+  sel.value=S.resp;$('#respList').innerHTML=names.map(n=>`<option value="${h(n)}">`).join('');
+}
+$('#respSel').addEventListener('change',()=>{S.resp=$('#respSel').value;try{localStorage.setItem('lacos.resp',S.resp);}catch(e){}renderAll();});
+function renderAll(){renderResp();renderMeta();renderAgenda();renderList();if(S.sel)renderDetail();}
 function start(store){
   S.store=store;
   store.onClients(list=>{S.clients=list;renderAll();});
@@ -678,6 +819,8 @@ renderAll();
   }
   S.mcp=window.claude&&typeof window.claude.use==='function'?await window.claude.use('mcp'):null;S.mcpChecked=true;
   if(document.querySelector('#dlgConv[open]'))renderPlaud();
+  if(S.sel)renderDetail();
+  S.sample=window.claude&&typeof window.claude.use==='function'?await window.claude.use('sample'):null;
 })();
 })();
 </script>
