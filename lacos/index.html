@@ -220,6 +220,8 @@ dialog::backdrop{background:rgba(10,14,28,.5)}
 .agendaline a{color:var(--accent)}
 #respSel{appearance:auto;background:var(--surface)}
 .msgarea{min-height:200px!important}
+.lbl.silent{color:var(--late);border-color:var(--late)}
+.card .foot .chip{padding:1px 8px;font-size:11.5px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
@@ -253,9 +255,11 @@ dialog::backdrop{background:rgba(10,14,28,.5)}
           <button class="fbtn" data-f="late" aria-pressed="false">Em atraso</button>
           <button class="fbtn" data-f="due" aria-pressed="false">Esta semana</button>
           <button class="fbtn" data-f="ok" aria-pressed="false">Em dia</button>
+          <button class="fbtn" data-f="silent" aria-pressed="false">Silêncio 45+ d</button>
           <button class="fbtn" data-f="pause" aria-pressed="false">Pausados</button>
         </div>
         <select id="respSel" class="fbtn" aria-label="Filtrar por responsável"><option value="">Toda a equipe</option></select>
+        <button class="btn" id="syncDrive" hidden title="Cadastra clientes novos a partir das pastas Clientes PJ e Clientes PF">Sincronizar Drive</button>
         <button class="btn primary" id="newClient">+ Novo cliente</button>
       </div>
       <div id="list"></div>
@@ -272,7 +276,7 @@ dialog::backdrop{background:rgba(10,14,28,.5)}
     <div class="db">
       <div class="two">
         <div class="f"><label for="c_nome">Nome</label><input id="c_nome" required autocomplete="off"></div>
-        <div class="f"><label for="c_empresa">Empresa / grupo</label><input id="c_empresa" autocomplete="off"></div>
+        <div class="two" style="grid-template-columns:1fr 120px"><div class="f"><label for="c_empresa">Empresa / grupo</label><input id="c_empresa" autocomplete="off"></div><div class="f"><label for="c_tipo">Tipo</label><select id="c_tipo"><option value="PJ">PJ</option><option value="PF">PF</option></select></div></div>
       </div>
       <div class="two">
         <div class="f"><label for="c_resp">Responsável no escritório</label><input id="c_resp" list="respList" placeholder="Quem cuida desta relação" autocomplete="off"><datalist id="respList"></datalist></div>
@@ -407,6 +411,7 @@ function LocalStore(){
   const emitC=id=>{const arr=Object.entries(data.conversas[id]||{}).map(([cid,v])=>Object.assign({id:cid},v)).sort((a,b)=>b.data<a.data?-1:1);(csubs.get(id)||new Set()).forEach(cb=>cb(arr));};
   return {
     kind:'local',
+    onEquipe(cb){setTimeout(()=>cb([]),0);return()=>{};},
     onClients(cb){subs.add(cb);setTimeout(emit,0);return()=>subs.delete(cb);},
     async saveClient(id,body){id=id||uid();data.clientes[id]=body;persist();emit();return id;},
     async deleteClient(id){delete data.clientes[id];delete data.conversas[id];persist();emit();},
@@ -420,6 +425,7 @@ function DbStore(db){
   const onErr=e=>{console.warn('db',e);if(e&&e.code==='quota_exceeded')toast('Limite de registros atingido. Exclua clientes ou conversas antigas.');};
   return {
     kind:'db',
+    onEquipe(cb){return db.doc('config/equipe').onSnapshot(s=>cb(s.exists&&Array.isArray(s.data().nomes)?s.data().nomes:[]),onErr);},
     onClients(cb){return col.onSnapshot(s=>cb(s.docs.map(d=>Object.assign({id:d.id},d.data()))),onErr);},
     async saveClient(id,body){if(id){await db.doc('clientes/'+id).set(body);return id;}const r=await col.add(body);return r.id;},
     async deleteClient(id){const q=await db.collection('clientes/'+id+'/conversas').limit(1000).get();await Promise.all(q.docs.map(d=>db.doc('clientes/'+id+'/conversas/'+d.id).delete()));await db.doc('clientes/'+id).delete();},
@@ -434,6 +440,11 @@ const S={clients:[],filter:'todos',q:'',resp:'',sel:null,store:null,mcp:null,sam
 try{S.resp=localStorage.getItem('lacos.resp')||'';}catch(e){}
 const respOk=c=>!S.resp||(c.responsavel||'')===S.resp;
 const TZ='America/Sao_Paulo';
+const LIMITE_SILENCIO=45;
+const DRIVE_PASTAS=[{id:'18JKEx6nlce5AhjUUP65VZ25pDv6brhfE',tipo:'PJ'},{id:'1xlVcVtouOpzp2lnA4QZdopCqyt8mOr_B',tipo:'PF'}];
+S.equipe=[];
+function diasSemContato(c){const hoje=todayStr();if(c.ultimoContato)return diffDays(c.ultimoContato,hoje);if(c.importadoEm)return diffDays(c.importadoEm.slice(0,10),hoje);return null;}
+function silencioso(c){const d=diasSemContato(c);return c.status!=='pausado'&&d!=null&&d>LIMITE_SILENCIO;}
 
 /* ---------- render: header ---------- */
 function renderMeta(){
@@ -443,6 +454,7 @@ function renderMeta(){
   $('#meta').innerHTML=`<span><b>${S.clients.length}</b> ${S.clients.length===1?'cliente':'clientes'}</span>`+
     (late?`<span class="chip late"><i class="dot"></i>${late} em atraso</span>`:'')+
     (due?`<span class="chip due"><i class="dot"></i>${due} esta semana</span>`:'')+
+    (()=>{const n=act.filter(silencioso).length;return n?`<span class="chip late"><i class="dot"></i>${n} há mais de ${LIMITE_SILENCIO} d sem contato</span>`:'';})()+
     (!late&&!due&&S.clients.length?`<span class="chip ok"><i class="dot"></i>Todos em dia</span>`:'');
 }
 
@@ -465,6 +477,8 @@ function renderAgenda(){
     html+=sec('late','Em atraso',late.map(c=>row(c,c.st.short)),'Ninguém esperando. Bom sinal.');
     html+=sec('due','Hoje',today.map(c=>row(c,c.canal||'')),'Nada marcado para hoje.');
     html+=sec('','Próximos 7 dias',week.map(c=>row(c,fmt(c.prox))),'Semana livre.');
+    const silent=act.filter(silencioso).sort((a,b)=>diasSemContato(b)-diasSemContato(a));
+    html+=sec('silent','Mais de '+LIMITE_SILENCIO+' dias sem contato',silent.slice(0,40).map(c=>row(c,diasSemContato(c)+' d'))+(silent.length>40?[`<div class="aempty">e mais ${silent.length-40}. Use o filtro "Silêncio" na lista.</div>`]:[]),'Ninguém em silêncio prolongado.');
     html+=sec('','Datas especiais · 30 dias',special.map(s=>`<button class="arow ${s.d<=3?'due':''}" data-open="${h(s.c.id)}"><span class="stripe"></span><span class="who"><b>${h(s.c.nome)}</b><span>${h(s.dt.rotulo)}</span></span><span class="when">${s.d===0?'hoje':(s.d===1?'amanhã':fmt(s.n))}</span></button>`),'Nenhuma data nos próximos 30 dias.');
   }
   $('#agenda').innerHTML=html;
@@ -474,7 +488,8 @@ function renderAgenda(){
 function matches(c){
   const st=statusOf(c).key;
   if(!respOk(c))return false;
-  if(S.filter!=='todos'&&st!==S.filter)return false;
+  if(S.filter==='silent'){if(!silencioso(c))return false;}
+  else if(S.filter!=='todos'&&st!==S.filter)return false;
   if(S.q){const t=(c.nome+' '+(c.empresa||'')+' '+(c.assunto||'')+' '+(c.responsavel||'')).toLowerCase();if(!t.includes(S.q))return false;}
   return true;
 }
@@ -492,7 +507,7 @@ function renderList(){
     return `<button class="card ${st.cls}" data-open="${h(c.id)}">
       <div class="head"><div><div class="name">${h(c.nome)}</div><div class="firm">${h([c.empresa,c.responsavel].filter(Boolean).join(' · '))}</div></div><span class="chip ${st.cls}">${h(st.label)}</span></div>
       <div class="topic">${h(last&&last.proximoAssunto?'Retomar: '+last.proximoAssunto:(c.assunto||'Sem assunto definido'))}</div>
-      <div class="foot"><span>${last?'Última conversa '+fmt(last.data):(c.ultimoContato?'Último contato '+fmt(c.ultimoContato):'Sem conversa registrada')}</span><span class="cad">a cada ${h(c.cadenciaDias||30)} d</span></div>
+      <div class="foot"><span>${last?'Última conversa '+fmt(last.data):(c.ultimoContato?'Último contato '+fmt(c.ultimoContato):'Sem conversa registrada')}</span><span class="cad">${silencioso(c)?`<span class="chip late">${diasSemContato(c)} d sem contato</span> `:''}a cada ${h(c.cadenciaDias||30)} d</span></div>
       ${c.exemplo?'<span class="chip example" style="position:absolute;right:12px;bottom:40px">Exemplo</span>':''}
     </button>`;}).join('')+`</div>`;
 }
@@ -517,7 +532,7 @@ function renderDetail(){
     <div class="row"><div><div class="name">${h(c.nome)}</div><div class="firm">${h([c.empresa,c.assunto].filter(Boolean).join(' · '))}</div></div><button class="iconbtn" data-closepanel aria-label="Fechar painel">✕</button></div>
     <div class="pulse">
       <div><div class="k">Situação</div><div class="v ${st.cls}">${h(st.label)}</div></div>
-      <div><div class="k">Último contato</div><div class="v">${since==null?'—':(since===0?'hoje':since+' d atrás')}</div></div>
+      <div><div class="k">Último contato</div><div class="v ${silencioso(c)?'late':''}">${since==null?(c.importadoEm?'nenhum registro':'—'):(since===0?'hoje':since+' d atrás')}</div></div>
       <div><div class="k">Próximo</div><div class="v">${c.status==='pausado'?'—':fmt(prox)}</div></div>
     </div>
     <div class="actions">
@@ -532,7 +547,9 @@ function renderDetail(){
   <div class="pb">
     ${c.exemplo?`<div class="quiet">Este é um cliente de exemplo, só para mostrar como a página fica preenchida. Exclua-o em <b>Editar → Excluir cliente</b> quando quiser.</div>`:''}
     <div class="sec"><h3>Ritmo</h3><div class="box"><dl class="kv">
+      <dt>Tipo</dt><dd>${h(c.tipo||'—')}${c.numeroPasta?' · pasta '+h(c.numeroPasta):''}</dd>
       <dt>Responsável</dt><dd>${h(c.responsavel||'—')}</dd>
+      ${c.driveUrl?`<dt>Drive</dt><dd><a href="${h(c.driveUrl)}" target="_blank" rel="noopener">Abrir pasta do cliente</a></dd>`:''}
       <dt>Falar a cada</dt><dd>${h(c.cadenciaDias||30)} dias</dd>
       <dt>Canal preferido</dt><dd>${h(c.canal||'—')}</dd>
       <dt>Telefone</dt><dd>${h(c.telefone||'—')}</dd>
@@ -571,7 +588,7 @@ function dateRow(dt){
 function openClientForm(c){
   S.editingId=c?c.id:null;
   $('#dlgClientTitle').textContent=c?'Editar cliente':'Novo cliente';
-  $('#c_nome').value=c?c.nome||'':'';$('#c_empresa').value=c?c.empresa||'':'';$('#c_resp').value=c?c.responsavel||'':(S.resp||'');$('#c_assunto').value=c?c.assunto||'':'';
+  $('#c_nome').value=c?c.nome||'':'';$('#c_empresa').value=c?c.empresa||'':'';$('#c_resp').value=c?c.responsavel||'':(S.resp||'');$('#c_tipo').value=c&&c.tipo==='PF'?'PF':'PJ';$('#c_assunto').value=c?c.assunto||'':'';
   $('#c_cad').value=String(c&&c.cadenciaDias||30);if($('#c_cad').value!==String(c&&c.cadenciaDias||30)){$('#c_cad').value='30';}
   $('#c_canal').value=c&&c.canal||'WhatsApp';$('#c_status').value=c&&c.status||'ativo';
   $('#c_tel').value=c?c.telefone||'':'';$('#c_email').value=c?c.email||'':'';$('#c_pessoal').value=c?c.pessoal||'':'';
@@ -584,7 +601,7 @@ $('#formClient').addEventListener('submit',async e=>{
   e.preventDefault();
   const prev=S.editingId?S.clients.find(x=>x.id===S.editingId):null;
   const body=Object.assign({},prev?stripId(prev):{criadoEm:new Date().toISOString()},{
-    nome:$('#c_nome').value.trim(),empresa:$('#c_empresa').value.trim(),responsavel:$('#c_resp').value.trim(),assunto:$('#c_assunto').value.trim(),
+    nome:$('#c_nome').value.trim(),empresa:$('#c_empresa').value.trim(),responsavel:$('#c_resp').value.trim(),tipo:$('#c_tipo').value,assunto:$('#c_assunto').value.trim(),
     cadenciaDias:+$('#c_cad').value,canal:$('#c_canal').value,status:$('#c_status').value,
     telefone:$('#c_tel').value.trim(),email:$('#c_email').value.trim(),pessoal:$('#c_pessoal').value.trim(),
     datasImportantes:[...$('#c_datas').querySelectorAll('.drow')].map(r=>{const i=r.querySelectorAll('input');return {rotulo:i[0].value.trim(),data:i[1].value,anual:i[2].checked};}).filter(d=>d.rotulo&&d.data),
@@ -789,6 +806,41 @@ async function agendar(c,btn){
   }catch(e){toast(mcpMsg(e).replace('o Plaud','o Google Calendar').replace('O Plaud','O Google Calendar'));btn.disabled=false;btn.textContent=old;}
 }
 
+/* ---------- Google Drive: sincronizar pastas de clientes ---------- */
+function proximosDiasUteis(n){const out=[];let d=parse(todayStr());while(out.length<n){d.setDate(d.getDate()+1);const w=d.getDay();if(w!==0&&w!==6)out.push(toStr(d));}return out;}
+function parseTitulo(t){const m=/^\s*(\d+)\s*[.\-–]?\s*(.+)$/.exec(t||'');return m?{numero:+m[1],nome:m[2].trim()}:{numero:null,nome:String(t||'').trim()};}
+async function listarPasta(folder){
+  const out=[];let token=null;
+  for(let i=0;i<10;i++){
+    const input={query:"parentId = '"+folder.id+"'",pageSize:100,excludeContentSnippets:true};if(token)input.pageToken=token;
+    const res=await S.mcp.callTool('Google Drive','search_files',input,{cache:false});
+    const p=payloadOf(res)||{};const files=Array.isArray(p.files)?p.files:[];
+    for(const f of files)if(f.mimeType==='application/vnd.google-apps.folder')out.push({id:f.id,title:f.title,url:f.viewUrl||'',created:f.createdTime||'',tipo:folder.tipo});
+    token=p.nextPageToken;if(!token||!files.length)break;
+  }
+  return out;
+}
+async function syncDrive(){
+  if(!S.mcp)return;const btn=$('#syncDrive');btn.disabled=true;const old=btn.textContent;btn.textContent='Lendo pastas do Drive…';
+  try{
+    const pastas=[];for(const f of DRIVE_PASTAS)pastas.push(...await listarPasta(f));
+    const known=new Set(S.clients.map(c=>c.driveId).filter(Boolean));
+    const novos=pastas.filter(x=>!known.has(x.id)&&!/teste/i.test(x.title));
+    if(!novos.length){toast('Nenhuma pasta nova. '+pastas.length+' pastas conferidas.');return;}
+    btn.textContent='Cadastrando '+novos.length+'…';
+    const dias=proximosDiasUteis(22);const now=new Date().toISOString();
+    // clientes já cadastrados por este import: espalhar os primeiros contatos pelas próximas semanas
+    let i=0;for(const x of novos.sort((a,b)=>(a.tipo+String(a.title)).localeCompare(b.tipo+String(b.title)))){
+      const t=parseTitulo(x.title);
+      await S.store.saveClient(null,{nome:t.nome,empresa:x.tipo==='PJ'?t.nome:'',tipo:x.tipo,numeroPasta:t.numero,assunto:'',responsavel:'',cadenciaDias:30,canal:'WhatsApp',status:'ativo',telefone:'',email:'',pessoal:'',datasImportantes:[],ultimoContato:null,proximoContato:dias[i%dias.length],ultimaConversa:null,driveId:x.id,driveUrl:x.url,origem:'drive',importadoEm:now,criadoEm:now,atualizadoEm:now});
+      i++;
+    }
+    toast(novos.length+(novos.length===1?' cliente novo cadastrado':' clientes novos cadastrados')+' a partir do Drive.');
+  }catch(e){toast(mcpMsg(e));}
+  finally{btn.disabled=false;btn.textContent=old;}
+}
+$('#syncDrive').addEventListener('click',syncDrive);
+
 /* ---------- wiring ---------- */
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
 $('#newClient').addEventListener('click',()=>openClientForm(null));
@@ -798,7 +850,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-open]');if
 $('#q').addEventListener('input',()=>{S.q=$('#q').value.trim().toLowerCase();renderList();});
 $('#filters').addEventListener('click',e=>{const b=e.target.closest('.fbtn');if(!b)return;S.filter=b.dataset.f;document.querySelectorAll('.fbtn').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));renderList();});
 function renderResp(){
-  const names=[...new Set(S.clients.map(c=>(c.responsavel||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const names=[...new Set(S.equipe.concat(S.clients.map(c=>(c.responsavel||'').trim())).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   const sel=$('#respSel');sel.innerHTML='<option value="">Toda a equipe</option>'+names.map(n=>`<option value="${h(n)}">${h(n)}</option>`).join('');
   if(S.resp&&!names.includes(S.resp)){S.resp='';try{localStorage.removeItem('lacos.resp');}catch(e){}}
   sel.value=S.resp;$('#respList').innerHTML=names.map(n=>`<option value="${h(n)}">`).join('');
@@ -808,6 +860,7 @@ function renderAll(){renderResp();renderMeta();renderAgenda();renderList();if(S.
 function start(store){
   S.store=store;
   store.onClients(list=>{S.clients=list;renderAll();});
+  store.onEquipe(n=>{S.equipe=n;renderResp();});
 }
 renderAll();
 (async()=>{
@@ -820,6 +873,7 @@ renderAll();
   S.mcp=window.claude&&typeof window.claude.use==='function'?await window.claude.use('mcp'):null;S.mcpChecked=true;
   if(document.querySelector('#dlgConv[open]'))renderPlaud();
   if(S.sel)renderDetail();
+  $('#syncDrive').hidden=!S.mcp;
   S.sample=window.claude&&typeof window.claude.use==='function'?await window.claude.use('sample'):null;
 })();
 })();
